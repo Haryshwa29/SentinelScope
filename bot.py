@@ -1,3 +1,4 @@
+from curses import raw
 import os
 import requests
 import base64
@@ -33,6 +34,20 @@ async def inline_scan(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not q:
         return
 
+    raw = query.lower().strip()
+
+    # Accept "scan google.com" or just "google.com"
+    parts = raw.split()
+
+    if parts[0] in ("scan", "check", "analyze", "analyse") and len(parts) > 1:
+        url = parts[1]
+    else:
+        url = parts[0]
+
+    if not url.startswith(("http://", "https://")):
+        url = "https://" + url
+
+    
     # Normalize
     if not q.startswith(("http://", "https://")):
         q = "https://" + q
