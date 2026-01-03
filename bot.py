@@ -16,6 +16,16 @@ from telegram.ext import InlineQueryHandler
 from telegram import User
 
 async def inline_scan(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    iq = update.inline_query
+    if iq is None:
+        return
+
+    query = (iq.query or "").strip()
+    print("INLINE QUERY RECEIVED:", query)
+    if not query:
+        return
+
     if not update.inline_query:
         return
 
