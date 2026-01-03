@@ -3,6 +3,7 @@ import requests
 import base64
 import logging
 import time
+import uuid
 
 
 from dotenv import load_dotenv
@@ -10,7 +11,37 @@ from difflib import get_close_matches
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
 from telegram.ext import MessageHandler, filters
+from telegram import InlineQueryResultArticle, InputTextMessageContent
+from telegram.ext import InlineQueryHandler
 from telegram import User
+
+async def inline_scan(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.inline_query:
+        return
+
+    q = update.inline_query.query.strip()
+    if not q:
+        return
+
+    # Normalize
+    if not q.startswith(("http://", "https://")):
+        q = "https://" + q
+
+    # Quick sanity
+    if "." not in q:
+        return
+
+    # Basic response (you can plug VT logic here)
+    text = f"✅ Ready to scan:\n{q}\n\nTip: Use /scan_url in DM for full report."
+
+    result = InlineQueryResultArticle(
+        id=str(uuid.uuid4()),
+        title=f"Scan {q}",
+        input_message_content=InputTextMessageContent(text),
+        description="Tap to insert result",
+    )
+
+    await update.inline_query.answer([result], cache_time=5)
 
 def get_user_id(update: Update) -> int | None:
     user: User | None = update.effective_user
@@ -241,13 +272,22 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
-def main():
+def build_telegram_app() -> Application:
     app = Application.builder().token(TOKEN).build()
+
+    # your handlers (same as before)
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", help_cmd))
     app.add_handler(CommandHandler("scan_url", scan_url))
+    app.add_handler(InlineQueryHandler(inline_scan))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
-    app.run_polling()
+
+    return app
+
+
+def main():
+    app = build_telegram_app()
+
 
 if __name__ == "__main__":
     main()
